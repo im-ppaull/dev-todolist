@@ -7,12 +7,14 @@ import { v } from "convex/values";
 // The schema provides more precise TypeScript types.
 export default defineSchema({
   todos: defineTable({
+    user: v.string(),
     text: v.string(),
     category: v.optional(v.string()),
     completed: v.boolean()
   }).index("by_completed", ["completed"]),
   users: defineTable({
     clerkId: v.string(),
+    isOnline: v.boolean(),
     name: v.optional(v.string())
   })
 })

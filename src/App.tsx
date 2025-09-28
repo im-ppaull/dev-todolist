@@ -1,30 +1,47 @@
 import { useUser } from "@clerk/clerk-react";
-import Header from "./components/Header";
 import Button from "./components/ui/Button";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
 
 export default function App() {
-  const { isSignedIn } = useUser();
-  const userCount = useQuery(api.users.getUserCount);
+  const { isSignedIn, user } = useUser();
+  const userCount = useQuery(api.users.getUserCount, { online: false });
+  const onlineUserCount = useQuery(api.users.getUserCount, { online: true });
   const registerUser = useMutation(api.users.registerUser);
+  const setUserOnlineStatus = useMutation(api.users.setUserOnlineStatus);
+  const todoList = useQuery(api.todos.list, {})?.list;
 
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn && user?.id) {
       void registerUser();
+      void setUserOnlineStatus({ status: true });
+
+      if (!localStorage.getItem("rawUserId")) {
+        localStorage.setItem("rawUserId", user.id);
+      }
+    } else {
+      const clerkId = localStorage.getItem("rawUserId");
+
+      if (clerkId) {
+        void setUserOnlineStatus({ status: false, clerkId });
+      }
     }
-  }, [isSignedIn, registerUser])
+  }, [isSignedIn, user?.id, registerUser, setUserOnlineStatus]);
 
   return (
     <div>
-      <Header />
-
-      <div className="container mx-auto mt-10 w-[1110px]">
+      <div>
         <div>
           <p className="font-bold">DEV TO-DO-LIST</p>
           <p>
-            An online TO-DO-LIST application. Save your list securily on this website and chat with other participants. If you want you can share your list with others. Feel free to contact me on <a href="https://github.com/im-ppaull" className="underline">GitHub</a> if you find any bugs on this webpage.
+            An intuitive online TO-DO-LIST application designed for developers and productivity enthusiasts. 
+            Keep your tasks organized and secure—your list is safely stored on this website. 
+            Collaborate with others by sharing your lists, or chat with participants to coordinate tasks and ideas. 
+            Perfect for managing personal projects, team tasks, or study plans.
+            Whether you’re managing a personal project, planning your daily routine, or collaborating with a team, this tool helps you stay on track.<br/>
+            Found a bug or have a suggestion? Feel free to contact me on <a href="https://github.com/im-ppaull" className="underline">GitHub</a> — your feedback helps improve the platform for everyone!
           </p>
           <p className="text-end text-sm">- PPaull</p>
         </div>
@@ -34,22 +51,18 @@ export default function App() {
             --- Web statistics ---
           </p>
 
-          <div className="w-fit outline-2 px-5 py-2 my-3 flex items-center gap-2">
-            <div className="flex flex-col justify-center items-center">
-              <p className="font-bold text-2xl stretch-min tracking-tight">{userCount}</p>
-              <p className="text-xs stretch-min tracking-tight">USERS</p>
-            </div>
-
-            <p className="text-bold mb-4 text-xl">:</p>
-
-            <div className="flex flex-col justify-center items-center">
-              <p className="font-bold text-2xl stretch-min tracking-tight">{Number(18475).toLocaleString('en-US')}</p>
-              <p className="text-xs stretch-min tracking-tight">TASKS</p>
-            </div>
+          <div className="w-fit outline-2 px-5 py-2 my-3 flex items-center gap-1">
+            <StatisticBlock label="USERS" value={userCount} />
+            <p className="text-xl font-bold">:</p>
+            <StatisticBlock label="ONLINE" value={onlineUserCount} />
+            <p className="text-xl font-bold">:</p>
+            <StatisticBlock label="TASKS" value={todoList?.length} />
           </div>
         </div>
 
-        <Button className="mt-3 hover:bg-emerald-300/50">Check List</Button>
+        <Link to="/list">
+         <Button className="mt-3 hover:bg-emerald-300/50">Check List</Button>
+        </Link>
 
         <div className="mt-5">
           <p className="stretch-min tracking-tight font-bold">
@@ -57,12 +70,24 @@ export default function App() {
           </p>
 
           <p className="leading-6 tracking-tight">
-            • Save as many tasks as you wish<br/>
-            • No login required to create a list, but sign in to save your list to the database<br/>
-            • Required to be logged in to be able to chat with other participants
+            • Create Unlimited Tasks: <i>Add as many tasks as you need — no limits or restrictions.</i><br/>
+            • Optional Sign-In for Saving: <i>You can start creating lists immediately without signing in. Sign in to save your tasks securely to the database.</i><br/>
+            • Chat & Collaborate: <i>Signing in is required to chat and collaborate with other participants in real time.</i><br/>
+            • Real-Time Chat: <i>Communicate directly with other participants, discuss tasks, and stay updated on shared lists.</i><br/>
+            • Flexible & Easy-to-Use: <i>Designed to be simple yet powerful—drag, edit, and manage your tasks without any hassle.</i><br/>
+            • Cross-Device Access: <i></i>Access your tasks anywhere, anytime — on desktop, tablet, or mobile.
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+const StatisticBlock = ({ label, value }: { label: string; value?: number }) => {
+  return (
+    <div className="flex flex-col items-center">
+      <p className="font-bold text-2xl stretch-min tracking-tight">{Number(value || 0).toLocaleString()}</p>
+      <p className="text-xs stretch-min tracking-tight">{label}</p>
     </div>
   );
 }
