@@ -11,10 +11,18 @@ export default defineSchema({
     text: v.string(),
     category: v.optional(v.string()),
     completed: v.boolean()
-  }).index("by_completed", ["completed"]),
+  }),
+
   users: defineTable({
     clerkId: v.string(),
     isOnline: v.boolean(),
     name: v.optional(v.string())
+  }),
+
+  chatMessages: defineTable({
+    userId: v.string(),
+    username: v.string(),
+    content: v.string(),
+    timestamp: v.string()
   })
 })

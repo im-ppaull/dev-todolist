@@ -6,7 +6,7 @@
 
 @theme {
   --color-light: #ffffff;
-  --color-dark: #171717;
+  --color-dark: #211D1B;
 }
 
 @media (prefers-color-scheme: dark) {
