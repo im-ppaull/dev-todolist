@@ -28,3 +28,24 @@ export const getMessages = query({
             .take(50)
     }
 })
+
+export const clearMessages = mutation({
+    args: {
+        userId: v.string()
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        if (!identity ||
+            identity.subject !== process.env.ADMIN_CLERK_ID) {
+            throw new Error("Unauthorized user attempted to clear messages.");
+        }
+
+        const allMessages = await ctx.db.query("chatMessages").collect();
+        for (const message of allMessages) {
+            await ctx.db.delete(message._id);
+        }
+
+        return { success: true, length: allMessages.length }
+    }
+})

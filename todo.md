@@ -1,4 +1,2 @@
-- Enhance todos.ts
 - Create list page
-    - Add chat (available only for logged users)
     - Add table (to-do-list)

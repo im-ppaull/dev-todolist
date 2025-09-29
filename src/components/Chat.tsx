@@ -4,22 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import Button from "./ui/Button";
 
+const showMaxMessages: number = 25;
+const host = import.meta.env.VITE_CREATOR_USER_ID;
+
 export const Chat: React.FC = () => {
     const { user } = useUser();
     const [message, setMessage] = useState('');
     const [error, setError] = useState<string | null>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const [filteredMessages, setFilteredMessages] = useState<any[]>([]);
 
     const messages = useQuery(api.chat.getMessages);
     const sendMessage = useMutation(api.chat.sendMessage);
-
-    const isHost = (userId: string) => {
-        return userId === import.meta.env.VITE_CREATOR_USER_ID
-    };
+    const clearMessages = useMutation(api.chat.clearMessages);
 
     useEffect(() => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+
+        if (messages) {
+            setFilteredMessages(messages.slice(0, showMaxMessages));
         }
     }, [messages]);
 
@@ -40,10 +45,15 @@ export const Chat: React.FC = () => {
     const handleSendMessage = async () => {
         if (message.trim() && user) {
             const trimmedMessage = message.trim();
-            const matches = trimmedMessage.match(/^\/(\w+)\s*(.*)/);
 
-            if (matches && matches.length > 0) {
-                setError("Your message contains inappropriate content and was not sent.");
+            // /clear command to clear chat messages, only for admin user
+            if (trimmedMessage === "/clear" && user.id !== host) {
+                setError("You are not authorized to clear messages.");
+                setMessage('');
+                return;
+            } else if (trimmedMessage === "/clear" && user.id === host) {
+                await clearMessages({ userId: user.id });
+                setMessage('');
                 return;
             }
 
@@ -59,13 +69,10 @@ export const Chat: React.FC = () => {
         }
     }
 
-    const getMessageAge = (timestamp: number) => {
-        const now = Date.now();
-        return (now - timestamp) / 1000 / 60; // in minutes
+    const showMoreMessages = () => {
+        // This function can be implemented to load more messages if needed.
+        setFilteredMessages(messages ? messages.slice(0, filteredMessages.length + showMaxMessages) : []);
     }
-
-    const filteredMessages = messages?.filter(msg =>
-        getMessageAge(msg._creationTime) < 5) || [];
 
     return (
         <div className="flex flex-col h-[50vh] p-4">
@@ -81,15 +88,13 @@ export const Chat: React.FC = () => {
                     {filteredMessages.slice().reverse().map
                     ((msg, index) => (
                         <div className="mb-2 break-after-all text-sm" key={index}>
-                            <span 
-                                className="font-bold" 
-                                style={{ color: isHost(msg.userId) ? '#EBC06D' : '#ffffff' }}
-                            >
-                                {msg.username}: </span>
+                            <span className="font-bold">{msg.username}: </span>
                             <span>{msg.content}</span>
                         </div>
                     ))}
                 </div>
+                { messages && (filteredMessages.length >= showMaxMessages) && (messages.length > filteredMessages.length) &&
+                    <div className="text-sm mx-auto underline cursor-pointer" onClick={() => showMoreMessages()}>Show more messages</div>}         
             </div>
 
             <div className="flex items-center gap-2">
