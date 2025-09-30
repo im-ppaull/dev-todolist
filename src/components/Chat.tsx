@@ -1,6 +1,6 @@
 import { useUser } from "@clerk/clerk-react";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import Button from "./ui/Button";
 
@@ -13,10 +13,12 @@ export const Chat: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const [filteredMessages, setFilteredMessages] = useState<any[]>([]);
+    const shiftPressed = useKeyPress('Shift');
 
     const messages = useQuery(api.chat.getMessages);
     const sendMessage = useMutation(api.chat.sendMessage);
     const clearMessages = useMutation(api.chat.clearMessages);
+    const deleteMessage = useMutation(api.chat.deleteMessage);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -69,6 +71,15 @@ export const Chat: React.FC = () => {
         }
     }
 
+    const handleDeleteMessage = async (messageId: any) => {
+        if (!user || user.id !== host) {
+            setError("You are not authorized to delete messages.");
+            return
+        }
+
+        await deleteMessage({ userId: user.id, messageId });
+    };
+
     const showMoreMessages = () => {
         // This function can be implemented to load more messages if needed.
         setFilteredMessages(messages ? messages.slice(0, filteredMessages.length + showMaxMessages) : []);
@@ -84,10 +95,14 @@ export const Chat: React.FC = () => {
                 ref={chatContainerRef}
                 className="flex-grow overflow-y-auto mb-4 flex flex-col-reverse"
             >
-                <div>
+                <div className="px-0.5">
                     {filteredMessages.slice().reverse().map
                     ((msg, index) => (
-                        <div className="mb-2 break-after-all text-sm" key={index}>
+                        <div className={`mb-2 break-after-all text-sm outline-red-500 p-1 
+                            ${(shiftPressed && user?.id === host) ? 'outline cursor-pointer select-none pointer-events-auto' : 'pointer-events-none'}`} 
+                            key={index}
+                            onClick={() => handleDeleteMessage(msg._id)}
+                        >
                             <span className="font-bold">{msg.username}: </span>
                             <span>{msg.content}</span>
                         </div>
@@ -110,3 +125,32 @@ export const Chat: React.FC = () => {
         </div>
     )
 }
+
+export const useKeyPress = (targetKey: KeyboardEvent['key']) => {
+  const [keyPressed, setKeyPressed] = useState(false);
+
+  const keyToggler = useCallback(
+    (toggle: boolean) =>
+      ({ key }: KeyboardEvent) => {
+        if (key === targetKey) {
+          setKeyPressed(toggle);
+        }
+      },
+    [targetKey]
+  );
+
+  const downHandler = keyToggler(true);
+  const upHandler = keyToggler(false);
+
+  useEffect(() => {
+    window.addEventListener('keydown', downHandler);
+    window.addEventListener('keyup', upHandler);
+
+    return () => {
+      window.removeEventListener('keydown', downHandler);
+      window.removeEventListener('keyup', upHandler);
+    };
+  }, [downHandler, upHandler]);
+
+  return keyPressed;
+};

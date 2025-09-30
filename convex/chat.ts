@@ -49,3 +49,20 @@ export const clearMessages = mutation({
         return { success: true, length: allMessages.length }
     }
 })
+
+export const deleteMessage = mutation({
+    args: {
+        userId: v.string(),
+        messageId: v.id("chatMessages")
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        if (!identity ||
+            identity.subject !== process.env.ADMIN_CLERK_ID) {
+            throw new Error("Unauthorized user attempted to delete message.");
+        }
+
+        await ctx.db.delete(args.messageId);
+    }
+})
