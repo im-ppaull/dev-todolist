@@ -72,8 +72,8 @@ export const Chat: React.FC = () => {
     }
 
     const handleDeleteMessage = async (messageId: any) => {
-        if (!user || user.id !== host) {
-            setError("You are not authorized to delete messages.");
+        if (!user || (user.id !== host && messages?.find(msg => msg._id === messageId)?.userId !== user.id)) {
+            setError("You are not authorized to delete this message.");
             return
         }
 
@@ -98,8 +98,10 @@ export const Chat: React.FC = () => {
                 <div className="px-0.5">
                     {filteredMessages.slice().reverse().map
                     ((msg, index) => (
-                        <div className={`mb-2 break-after-all text-sm outline-red-500 p-1 
-                            ${(shiftPressed && user?.id === host) ? 'outline cursor-pointer select-none pointer-events-auto' : 'pointer-events-none'}`} 
+                        <div className={`mb-2 break-after-all text-sm outline-red-500 
+                            ${(shiftPressed && (user?.id === host || user?.id === msg.userId)) ? 
+                                'outline cursor-pointer select-none pointer-events-auto' 
+                                : 'pointer-events-none'}`} 
                             key={index}
                             onClick={() => handleDeleteMessage(msg._id)}
                         >
@@ -131,8 +133,17 @@ export const useKeyPress = (targetKey: KeyboardEvent['key']) => {
 
   const keyToggler = useCallback(
     (toggle: boolean) =>
-      ({ key }: KeyboardEvent) => {
-        if (key === targetKey) {
+      ({ key, target }: KeyboardEvent) => {
+        const el = target as HTMLElement;
+        if (
+            el.tagName === "INPUT" ||
+            el.tagName === "TEXTAREA" ||
+            el.isContentEditable
+        ) {
+            return;
+        }
+
+        if (key === targetKey)  {
           setKeyPressed(toggle);
         }
       },
